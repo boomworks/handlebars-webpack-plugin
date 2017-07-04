@@ -15,14 +15,13 @@ const log = require("./utils/log");
  *                                          If ommited, the same filename stripped of its extension will be used
  * @return {String} target filepath
  */
-function getTargetFilepath(filepath, outputTemplate) {
+function getTargetFilepath(filepath, outputTemplate, cwd) {
     if (outputTemplate == null) {
         return filepath.replace(path.extname(filepath), "");
     }
-
-    const fileName = path
-        .basename(filepath)
-        .replace(path.extname(filepath), "");
+    const fileName = filepath
+        .replace(cwd, '')
+        .replace(path.extname(filepath), '');
     return outputTemplate.replace("[name]", fileName);
 }
 
@@ -31,6 +30,7 @@ class HandlebarsPlugin {
 
     constructor(options) {
         this.options = Object.assign({
+            cwd: '',
             entry: null,
             output: null,
             data: {},
@@ -116,7 +116,8 @@ class HandlebarsPlugin {
      * @param  {String} content     - file contents
      */
     registerGeneratedFile(filepath, content) {
-        this.assetsToEmit[path.basename(filepath)] = {
+        const outputFilename = filepath.replace(path.dirname(this.options.output) + '/', '');
+        this.assetsToEmit[outputFilename] = {
             source: () => content,
             size: () => content.length
         };
@@ -166,7 +167,7 @@ class HandlebarsPlugin {
      * @param  {String} filepath    - filepath to handelebars template
      */
     compileEntryFile(filepath) {
-        const targetFilepath = getTargetFilepath(filepath, this.options.output);
+        const targetFilepath = getTargetFilepath(filepath, this.options.output, this.options.cwd);
         // fetch template content
         let templateContent = this.readFile(filepath, "utf-8");
         templateContent = this.options.onBeforeCompile(Handlebars, templateContent) || templateContent;
